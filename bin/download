@@ -31,6 +31,8 @@ get_arch(){
   declare arch="$(uname -m)"
   if [ "$arch" == 'x86_64' ]; then
     echo '64'
+  elif [ "$arch" == 'arm64' ]; then
+    echo '64'
   elif [ "$arch" == 'i386' ]; then
     echo '32'
   elif [ "$arch" == 'i686' ]; then
@@ -128,6 +130,7 @@ download() {
 
   if [ "$download_type" == "version" ]; then
     declare -r download_url="$(find_file_url "$download_version")"
+    printf "Downloading jq $download_version ($download_url)...\n"
     if [ -z "$download_url" ]; then
       error_exit "Malformed URL"
     fi
@@ -137,10 +140,12 @@ download() {
     rm -rf "$download_path"
     git init "$download_path"
     cd "$download_path"
+    printf "Installing jq $download_version from git source...\n"
     git remote add origin "$JQ_REPO"
     git fetch --depth=1 origin "$download_version"
     git reset --hard "$download_version"
   fi
+  printf "jq $download_version installed!\n"
 }
 
 

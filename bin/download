@@ -33,6 +33,8 @@ get_arch(){
   declare arch="$(uname -m)"
   if [ "$arch" == 'x86_64' ]; then
     echo '64'
+  elif [ "$arch" == 'aarch64' ]; then
+    echo '64'
   elif [ "$arch" == 'arm64' ]; then
     echo '64'
   elif [ "$arch" == 'i386' ]; then
@@ -135,11 +137,15 @@ guess_download_url() {
   declare -r arch="$(get_arch)"
   declare -r platform="$(get_platform)"
 
+  if [ "$arch" == 'aarch64' ]; then
+    arch="arm64"
+  fi
+
   local guessed_file=''
   if [ $platform = 'osx' ]; then
     guessed_file="jq-osx-amd64"
   elif [ $platform = 'linux' && -n "$arch" ]; then
-    guessed_file="jq-linux$arch"
+    guessed_file="jq-linux-$arch"
   fi
   local guess_successful=0
 }

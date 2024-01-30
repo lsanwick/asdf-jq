@@ -34,9 +34,17 @@ get_arch(){
   if [ "$arch" == 'x86_64' ]; then
     echo '64'
   elif [ "$arch" == 'aarch64' ]; then
-    echo '64'
+    if echo $ASDF_INSTALL_VERSION | grep ^1\\.\[0-6\]; then
+      echo '64'
+    else
+      echo '-arm64'
+    fi
   elif [ "$arch" == 'arm64' ]; then
-    echo '64'
+    if echo $ASDF_INSTALL_VERSION | grep ^1\\.\[0-6\]; then
+      echo '64'
+    else
+      echo '-arm64'
+    fi
   elif [ "$arch" == 'i386' ]; then
     echo '32'
   elif [ "$arch" == 'i686' ]; then

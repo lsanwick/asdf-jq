@@ -20,31 +20,20 @@ error_exit() {
 }
 
 get_platform() {
-  local testStr="$(uname | tr '[:upper:]' '[:lower:]')"
-  if [ "$testStr" == "darwin" ]; then
-    echo "osx"
-  else
-    echo "linux"
-  fi
-  return
+  local platform="$(uname | tr '[:upper:]' '[:lower:]')"
+  case "$platform" in
+    darwin) echo macos ;;
+    *) echo "$platform" ;;
+  esac
 }
 
-get_arch(){
+get_arch() {
   declare arch="$(uname -m)"
-  if [ "$arch" == 'x86_64' ]; then
-    echo '64'
-  elif [ "$arch" == 'aarch64' ]; then
-    echo '64'
-  elif [ "$arch" == 'arm64' ]; then
-    echo '64'
-  elif [ "$arch" == 'i386' ]; then
-    echo '32'
-  elif [ "$arch" == 'i686' ]; then
-    echo '32'
-  else
-    error_exit 'Sadly, there are no official releases for your architecture'
-  fi
-  return
+  case "$arch" in
+    x86_64) echo amd64 ;;
+    aarch64) echo arm64 ;;
+    *) echo "$arch" ;;
+  esac
 }
 
 get_assets_url() {
@@ -95,20 +84,18 @@ filter_assets() {
   declare platform="$(get_platform)";
   declare arch="$(get_arch)"
   declare -a filteredArr=()
+  local machine_platform_arch="$platform-$arch"
 
   for i in "${inArr[@]}"; do
-    if [ "$arch" == "32" ]; then
-      declare filteredUrl="$(echo "$i" | sed -n -E "/.*$platform.*(86|32)/p" | sed -n -E '/.*86_64.*/!p')"
-      declare canPass="$(echo "$filteredUrl" | sed -n -E 's/.*[[:alpha:]].*/true/p')"
-      if [ "$canPass" == "true" ]; then
-        filteredArr+=("$filteredUrl")
-      fi
-    else
-      declare filteredUrl="$(echo "$i" | sed -n -E "/$platform.*(64)/p")"
-      declare canPass="$(echo "$filteredUrl" | sed -n -E 's/.*[[:alpha:]].*/true/p')"
-      if [ "$canPass" == "true" ]; then
-        filteredArr+=("$filteredUrl")
-      fi
+    local platform_arch="${i##*/jq-}"
+    case "$platform_arch" in
+      linux32|linux-x86) platform_arch=linux-i386 ;;
+      linux64|linux-x86-64) platform_arch=linux-amd64 ;;
+      osx-x86) platform_arch=macos-i386 ;;
+      osx-amd64|osx-x86-64) platform_arch=macos-amd64 ;;
+    esac
+    if [ "$platform_arch" == "$machine_platform_arch" ] ; then
+        filteredArr+=("$i")
     fi
   done
   echo "${filteredArr[@]}"
@@ -120,34 +107,15 @@ find_file_url() {
   declare -r arch="$(get_arch)"
   declare -r platform="$(get_platform)"
   declare -a assets=($(find_all_asset_names "$install_version"))
-  declare -a usableAssets=( "$(filter_assets "${assets[@]}")" )
+  declare -a usableAssets=($(filter_assets "${assets[@]}"))
 
   if [ "${#usableAssets[@]}" == 0 ]; then
-    error_exit "No releases in version $install_version matching $platform $arch-bits"
+    error_exit "No releases in version $install_version matching $platform-$arch"
   elif [ "${#usableAssets[@]}" -gt 1  ]; then
     echo "Multiple releases found matching $platform $arch-bits, choosing first" >&2
   fi
 
   echo "${usableAssets[0]}"
-}
-
-guess_download_url() {
-  declare -r install_version="$@"
-
-  declare -r arch="$(get_arch)"
-  declare -r platform="$(get_platform)"
-
-  if [ "$arch" == 'aarch64' ]; then
-    arch="arm64"
-  fi
-
-  local guessed_file=''
-  if [ $platform = 'osx' ]; then
-    guessed_file="jq-osx-amd64"
-  elif [ $platform = 'linux' && -n "$arch" ]; then
-    guessed_file="jq-linux-$arch"
-  fi
-  local guess_successful=0
 }
 
 download() {
@@ -161,27 +129,21 @@ download() {
 
     declare -r platform=$(get_platform)
     declare -r arch=$(get_arch)
-    local guessed_file=''
-    if [ $platform = osx ]; then
-      guessed_file="jq-osx-amd64"
-    elif [ $platform = linux ] && [ -n "$arch" ]; then
-      guessed_file="jq-linux$arch"
-    fi
+    local guessed_file="jq-$platform-$arch"
     local guess_successful=0
-    if [ -n "$guessed_file" ]; then
-      declare -r guessed_url="${DOWNLOAD_BASE_URL}/jq-${download_version}/${guessed_file}"
-      if curl_wrapper -fsS -L -o "$bin_path" "$guessed_url" 2>/dev/null; then
-        printf "Accurately guessed jq $download_version download URL: $guessed_url\n"
-        guess_successful=1
-      fi
+
+    declare -r guessed_url="${DOWNLOAD_BASE_URL}/jq-${download_version}/${guessed_file}"
+    if curl_wrapper -fsS -L -o "$bin_path" "$guessed_url" 2>/dev/null; then
+      printf "Accurately guessed jq $download_version download URL: $guessed_url\n"
+      guess_successful=1
     fi
 
     if [ $guess_successful = 0 ]; then
       declare -r download_url=$(find_file_url "$download_version")
-      printf "Downloading jq $download_version ($download_url)...\n"
       if [ -z "$download_url" ]; then
-        error_exit "Malformed URL"
+        exit 1
       fi
+      printf "Downloading jq $download_version ($download_url)...\n"
       curl_wrapper -fsS -L -o "$bin_path" "$download_url"
     fi
   else
@@ -197,4 +159,3 @@ download() {
 }
 
 download "$ASDF_INSTALL_TYPE" "$ASDF_INSTALL_VERSION" "$ASDF_DOWNLOAD_PATH"
-#download ref 2e01ff1fb69609540b2bdc4e62a60499f2b2fb8e ~/Desktop/jqsource

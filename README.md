@@ -6,8 +6,8 @@
 
 ## Install
 
-```
-asdf plugin-add jq https://github.com/lsanwick/asdf-jq.git
+```shell
+asdf plugin-add jq https://github.com/mike-neck/asdf-jq.git
 ```
 
 ## Use

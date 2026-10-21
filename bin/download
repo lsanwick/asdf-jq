@@ -32,15 +32,15 @@ get_platform() {
 get_arch(){
   declare arch="$(uname -m)"
   if [ "$arch" == 'x86_64' ]; then
-    echo '64'
+    echo 'amd64'
   elif [ "$arch" == 'aarch64' ]; then
-    echo '64'
+    echo 'arm64'
   elif [ "$arch" == 'arm64' ]; then
-    echo '64'
+    echo 'arm64'
   elif [ "$arch" == 'i386' ]; then
-    echo '32'
+    echo 'i386'
   elif [ "$arch" == 'i686' ]; then
-    echo '32'
+    echo 'i386'
   else
     error_exit 'Sadly, there are no official releases for your architecture'
   fi
@@ -143,7 +143,7 @@ guess_download_url() {
 
   local guessed_file=''
   if [ $platform = 'osx' ]; then
-    guessed_file="jq-osx-amd64"
+    guessed_file="jq-macos-${arch}"
   elif [ $platform = 'linux' && -n "$arch" ]; then
     guessed_file="jq-linux-$arch"
   fi
@@ -163,9 +163,9 @@ download() {
     declare -r arch=$(get_arch)
     local guessed_file=''
     if [ $platform = osx ]; then
-      guessed_file="jq-osx-amd64"
+      guessed_file="jq-macos-${arch}"
     elif [ $platform = linux ] && [ -n "$arch" ]; then
-      guessed_file="jq-linux$arch"
+      guessed_file="jq-linux-${arch}"
     fi
     local guess_successful=0
     if [ -n "$guessed_file" ]; then
